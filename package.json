@@ -1,0 +1,16 @@
+{
+   "dependencies": {
+      "node-html-parser": "^6.1.13",
+      "showdown": "^2.1.0",
+      "yaml": "^2.5.0"
+   },
+   "devDependencies": {
+      "@types/node": "^22.0.0",
+      "@types/showdown": "^2.0.6"
+   },
+   "prettier": {
+      "printWidth": 60,
+      "tabWidth": 3
+   },
+   "packageManager": "npm@10.8.2"
+}

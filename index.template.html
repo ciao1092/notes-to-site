@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en-US">
+   <head>
+      <staticCSSref name="style.css" />
+      <title><getVar varName="indexTitle" /></title>
+      <meta
+         name="viewport"
+         content="width=device-width,initial-scale=1"
+      />
+      <meta charset="UTF-8" />
+   </head>
+   <body>
+      <div class="container">
+         <ifFalsely varName="isTopDir">
+            <a href=".." class="backLink">Back</a>
+         </ifFalsely>
+         <h1><getVar varName="indexTitle" /></h1>
+         <ul id="notes">
+            <li><a href="#">Stub link</a></li>
+            <li><a href="#">Stub link</a></li>
+            <li><a href="#">Stub link</a></li>
+         </ul>
+
+         <footer>Copyright &copy; 2024 Carlo Condò</footer>
+      </div>
+   </body>
+</html>
