@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en-US">
    <head>
-      <staticCSSref name="style.css" />
-      <title><getVar varName="indexTitle" /></title>
+      <link rel="stylesheet" x-href="path.join(staticPath, `style.css`)" />
+      <title><x-var name="indexTitle" /></title>
       <meta
          name="viewport"
          content="width=device-width,initial-scale=1"
@@ -11,10 +11,10 @@
    </head>
    <body>
       <div class="container">
-         <ifFalsely varName="isTopDir">
+         <x-if condition="!check(`isTopDir`)">
             <a href=".." class="backLink">Back</a>
-         </ifFalsely>
-         <h1><getVar varName="indexTitle" /></h1>
+         </x-if>
+         <h1><x-var name="indexTitle" /></h1>
          <ul id="notes">
             <li><a href="#">Stub link</a></li>
             <li><a href="#">Stub link</a></li>

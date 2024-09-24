@@ -1,34 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
    <head>
-      <staticCSSref name="style.css" />
       <title class="noteTitle">Note</title>
       <meta
          name="viewport"
          content="width=device-width,initial-scale=1"
       />
       <meta charset="UTF-8" />
+      <link
+         rel="stylesheet"
+         x-href="path.join(staticPath, `style.css`)"
+      />
    </head>
    <body>
       <div class="container">
          <a href="." class="backLink">Back</a>
          <main class="noteContent"></main>
          <footer>
-            <ifFalsely varName="author">
+            <x-if condition="!check(`author`)">
                Copyright &copy; 2024 Carlo Condò
-            </ifFalsely>
-            <ifTruely varName="author">
+            </x-if>
+            <x-if condition="check(`author`)">
                <i>By</i>
-               <getVar varName="author" />
+               <x-var name="author" />
                <br />
-            </ifTruely>
-            <ifTruely varName="date">
+            </x-if>
+            <x-if condition="check(`date`)">
                <i
-                  >Posted on <getVar varName="date" />
-                  <ifTruely varName="time">
-                     at <getVar varName="time" /></ifTruely
+                  >Posted on <x-var name="date" />
+                  <x-if condition="check(`time`)">
+                     at <x-var name="time" /></x-if
                ></i>
-            </ifTruely>
+            </x-if>
          </footer>
       </div>
    </body>

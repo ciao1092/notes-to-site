@@ -1,4 +1,5 @@
 {
+   "type": "module",
    "dependencies": {
       "node-html-parser": "^6.1.13",
       "showdown": "^2.1.0",

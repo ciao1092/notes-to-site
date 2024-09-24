@@ -6,94 +6,9 @@ import {
    HTMLElement,
 } from "node-html-parser";
 import * as YAML from "yaml";
+import * as htmlTemplates from "./html-template-handler";
 
 const MardownCompiler = new Showdown.Converter();
-
-const setStaticLinks = (
-   dom: HTMLElement,
-   staticDirTargetRelativePath: string
-) => {
-   for (const r of dom.getElementsByTagName(
-      "staticCSSref"
-   )) {
-      const n: string | undefined = r.getAttribute("name");
-      if (n === undefined) {
-         console.warn(
-            `Warning: no name to import ('${r.outerHTML}') (in indexTemplateHTML)`
-         );
-      } else {
-         r.insertAdjacentHTML(
-            "beforebegin",
-            `<link rel="stylesheet" href="${path.join(
-               staticDirTargetRelativePath,
-               n
-            )}" />`
-         );
-      }
-
-      r.parentNode.removeChild(r);
-   }
-};
-
-const checkIFs = (dom: HTMLElement, vars: any) => {
-   if (vars === undefined || vars === null) vars = {};
-
-   for (const ifNode of dom.getElementsByTagName(
-      "ifTruely"
-   )) {
-      const varName = ifNode.getAttribute("varName");
-      if (varName === undefined) {
-         console.warn(
-            "condition === undefined, while processing index template"
-         );
-      } else {
-         if (vars[varName]) {
-            ifNode.insertAdjacentHTML(
-               "beforebegin",
-               ifNode.innerHTML
-            );
-         }
-      }
-      ifNode.parentNode.removeChild(ifNode);
-   }
-
-   for (const ifNode of dom.getElementsByTagName(
-      "ifFalsely"
-   )) {
-      const varName = ifNode.getAttribute("varName");
-      if (varName === undefined) {
-         console.warn(
-            "condition === undefined, while processing index template"
-         );
-      } else {
-         if (!vars[varName]) {
-            ifNode.insertAdjacentHTML(
-               "beforebegin",
-               ifNode.innerHTML
-            );
-         }
-      }
-      ifNode.parentNode.removeChild(ifNode);
-   }
-};
-
-const resolveVars = (dom: HTMLElement, vars: any) => {
-   if (vars === undefined || vars === null) vars = {};
-
-   for (const varNode of dom.getElementsByTagName(
-      "getVar"
-   )) {
-      const varName: string | undefined =
-         varNode.getAttribute("varName");
-      if (varName) {
-         const x = vars[varName] || "undefined";
-         varNode.insertAdjacentHTML("beforebegin", x);
-      } else {
-         console.warn("No varname: " + varNode.outerHTML);
-      }
-      varNode.parentNode.removeChild(varNode);
-   }
-};
 
 const targetNotDirectory = (outDir): Error =>
    new Error(
@@ -116,7 +31,7 @@ const copyDirectoryTreeAsync = async (
    }
 
    const dirents = await fsPromises.readdir(sourceDir);
-   for (const dirent of dirents) {
+   for await (const dirent of dirents) {
       const sourcePath = path.join(sourceDir, dirent);
       const targetPath = path.join(targetDir, dirent);
 
@@ -162,19 +77,18 @@ const processDirectory = async (
       }
    }
 
-   const indexDOM = parseHTML(indexTemplateHTML);
-
-   checkIFs(indexDOM, { isTopDir: isTopDir });
-   resolveVars(indexDOM, {
-      indexTitle: path.basename(inDir),
-   });
-
-   setStaticLinks(indexDOM, staticDirTargetRelativePath);
+   const indexDOM = parseHTML(
+      await htmlTemplates.makeHTML(indexTemplateHTML, {
+         indexTitle: path.basename(inDir),
+         isTopDir,
+         staticPath: staticDirTargetRelativePath,
+      })
+   );
 
    const notesUlNode = indexDOM.getElementById("notes")!;
    notesUlNode.innerHTML = "";
    const noteFileNames = await fsPromises.readdir(inDir);
-   for (const noteFileName of noteFileNames) {
+   for await (const noteFileName of noteFileNames) {
       const notePath = path.join(inDir, noteFileName);
       const noteBaseName = path.basename(noteFileName);
 
@@ -248,11 +162,13 @@ const processDirectory = async (
             ? YAML.parse(yamlContent)
             : undefined;
 
-         const compiledMarkdown =
+         const compiledMarkdown: string =
             MardownCompiler.makeHtml(markdownContent);
 
-         const mdDOM = parseHTML(compiledMarkdown);
-         const noteTitle =
+         const mdDOM: HTMLElement = parseHTML(
+            compiledMarkdown
+         );
+         const noteTitle: string =
             yamlData &&
             yamlData.title &&
             typeof yamlData.title === "string"
@@ -261,28 +177,24 @@ const processDirectory = async (
                  noteName[0].toUpperCase() +
                     noteName.slice(1);
 
-         const noteDOM = parseHTML(
-            (
-               await fsPromises.readFile(
-                  "note.template.html"
-               )
-            ).toString()
+         const noteTemplaetHTML: string = (
+            await fsPromises.readFile("note.template.html")
+         ).toString();
+
+         const noteDOM: HTMLElement = parseHTML(
+            await htmlTemplates.makeHTML(noteTemplaetHTML, {
+               ...yamlData,
+               staticPath: staticDirTargetRelativePath,
+            })
          );
 
-         checkIFs(noteDOM, yamlData);
-         resolveVars(noteDOM, yamlData);
-         setStaticLinks(
-            noteDOM,
-            staticDirTargetRelativePath
-         );
-
-         for (const titleNode of noteDOM.querySelectorAll(
+         for await (const titleNode of noteDOM.querySelectorAll(
             ".noteTitle"
          )) {
             titleNode.innerHTML = noteTitle;
          }
 
-         for (const contentNode of noteDOM.querySelectorAll(
+         for await (const contentNode of noteDOM.querySelectorAll(
             ".noteContent"
          )) {
             contentNode.innerHTML = compiledMarkdown;
@@ -305,12 +217,15 @@ const processDirectory = async (
 };
 
 (async () => {
-   const outDir = path.join(__dirname, "public");
+   const outDir = path.join(import.meta.dirname, "public");
    const inDir = path.join(
       process.env["HOME"] || "/",
-      "",
+      "Documents"
    );
-   const staticDirSrc = path.join(__dirname, "static");
+   const staticDirSrc = path.join(
+      import.meta.dirname,
+      "static"
+   );
    const staticDirTargetRelativePath = path.relative(
       outDir,
       path.join(outDir, "static")
@@ -318,7 +233,10 @@ const processDirectory = async (
 
    const indexTemplateHTML: string = (
       await fsPromises.readFile(
-         path.join(__dirname, "index.template.html")
+         path.join(
+            import.meta.dirname,
+            "index.template.html"
+         )
       )
    ).toString();
 
@@ -331,6 +249,9 @@ const processDirectory = async (
 
    await copyDirectoryTreeAsync(
       staticDirSrc,
-      path.join(path.relative(__dirname, outDir), "static")
+      path.join(
+         path.relative(import.meta.dirname, outDir),
+         "static"
+      )
    );
 })();
